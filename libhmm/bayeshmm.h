@@ -7,11 +7,26 @@
 
 #include "basehmm.h"
 
-class BayesHMM : public BayesHMM{
+class BayesHMM : public BaseHMM{
 public:
-    BayesHMM(unsigned n, unsigned m):BayesHMM(n, m){}
+    BayesHMM(unsigned n, unsigned m):BaseHMM(n, m){}
 
 protected:
+    //初始化
+    virtual void init(DMatrix<float> *o) {
+        BaseHMM::init(o);
+
+        for (unsigned i = 0; i < model_.getB()->getDim1(); ++i) {
+            float sum = 0;
+            for (unsigned j = 0; j < model_.getB()->getDim2(); ++j) {
+                (*model_.getB())(i, j) = rand() / float(RAND_MAX);
+                sum += (*model_.getB())(i, j);
+            }
+            for (unsigned j = 0; j < model_.getB()->getDim2(); ++j)
+                (*model_.getB())(i, j) /= sum;
+        }
+    }
+
     virtual float getOutProbability(unsigned n, unsigned t, DMatrix<float>* o){
         return (*model_.getB())(n, (unsigned)o->get(t,0));
     }

@@ -7,7 +7,10 @@
 
 #include "base/matrix.h"
 #include <math.h>
+#include <stdlib.h>
 using namespace std;
+
+#include <iostream>
 
 class HMMModel {
 public:
@@ -50,6 +53,8 @@ public:
 
     }
 
+    virtual ~BaseHMM(){}
+
     void train(DMatrix<float> *o, int epochNum) {
         init(o);
         do {
@@ -63,8 +68,31 @@ public:
         } while (--epochNum);
     }
 
+    virtual int getCurrentHideState(){
+        int hideState = 0;
+        float maxP = 0;
+        for(int i = 0; i < gamma_.getDim2(); ++i){
+            if(gamma_(-1, i) > maxP){
+                maxP = gamma_(-1, i);
+                hideState = i;
+            }
+        }
+        return hideState;
+    }
+
+    int getHideStateCoff(float* outCoff){
+        int id = 0;
+        for(int i = 0; i < model_.getB()->getDim1(); ++i){
+            for(int j = 0; j < model_.getB()->getDim2(); ++j){
+                outCoff[id++] = (*model_.getB())(i, j);
+            }
+        }
+        return id;
+    }
+
+protected:
     //得到第n步隐藏状态是n时观测输出值o[t]的发生概率
-    virtual float getOutProbability(unsigned n, unsigned t, DMatrix<float> *o) {
+    virtual float getOutProbability(unsigned n, unsigned t, DMatrix<float>* o) {
         return 0.0f;
     }
 
@@ -73,21 +101,19 @@ public:
         //初始化中间结果需要的内存
         alpha_.setSize(o->getDim1(), model_.getA()->getDim1());
         beta_.setSize(o->getDim1(), model_.getA()->getDim1());
+        gamma_.setSize(o->getDim1(),model_.getA()->getDim1());
+        xi_.setSize(o->getDim1()-1, model_.getA()->getDim1() * model_.getA()->getDim1());
         scale_.setSize(o->getDim1(), 1);
 
-        //初始化隐藏状态间的转移概率
         for (unsigned i = 0; i < model_.getA()->getDim1(); ++i) {
             float sum = 0;
             for (unsigned j = 0; j < model_.getA()->getDim2(); ++j) {
                 (*model_.getA())(i, j) = rand() / float(RAND_MAX);
                 sum += (*model_.getA())(i, j);
             }
-            for (unsigned j = 0; j < model_.getA()->getDim2(); ++j){
+            for (unsigned j = 0; j < model_.getA()->getDim2(); ++j)
                 (*model_.getA())(i, j) /= sum;
-            }
-
         }
-
         //初始化最开始隐藏状态发生的概率
         float sum = 0;
         for (unsigned i = 0; i < model_.getPi()->getDim1(); ++i) {
@@ -108,7 +134,8 @@ public:
         }
         scale_(0,0) = 1.0f / scale_(0,0);
         for (unsigned i = 0; i < alpha_.getDim2(); ++i) {
-            alpha_(0, i) *= scale(0,0);
+            alpha_(0, i) *= scale_(0,0);
+            //cout << "alpha[" << 0 << "][" << i << "]=" << alpha_(0, i) << endl;
         }
         for (unsigned t = 1; t < o->getDim1(); ++t) {
             for (unsigned i = 0; i < alpha_.getDim2(); ++i) {
@@ -116,11 +143,20 @@ public:
                 for (unsigned j = 0; j < alpha_.getDim2(); ++j)
                     pi += alpha_(t - 1, j) * (*model_.getA())(j, i);
                 alpha_(t, i) = pi * getOutProbability(i, t, o);
+
+//                for(unsigned j = 0; j < alpha_.getDim2(); ++j)
+//                    cout<<(*model_.getA())(j, i)<<" ";
+//                cout<<endl;
+//                cout << "alpha[" << t << "][" << i << "]=" << alpha_(t, i) <<" "<<getOutProbability(i, t, o) << endl;
+
                 scale_(t, 0) += alpha_(t, i);
             }
             scale_(t, 0) = 1.0f / scale_(t, 0);
-            for (unsigned i = 0; i < alpha_.getDim2(); ++i)
+            for (unsigned i = 0; i < alpha_.getDim2(); ++i){
                 alpha_(t, i) *= scale_(t, 0);
+
+            }
+
         }
     }
 
@@ -134,7 +170,7 @@ public:
                 for (unsigned j = 0; j < alpha_.getDim2(); ++j)
                     pi += beta_(t + 1, j) * (*model_.getA())(i, j) * getOutProbability(j, t + 1, o);
                 beta_(t, i) = pi * scale_(t, 0);
-                //cout << "beta[" << t << "][" << i << "]=" << beta_(t, i) << endl;
+//                cout << "beta[" << t << "][" << i << "]=" << beta_(t, i) << endl;
             }
         }
     }
@@ -146,7 +182,7 @@ public:
                 pi += alpha_(t, j) * beta_(t, j);
             for (unsigned i = 0; i < gamma_.getDim2(); ++i) {
                 gamma_(t, i) = alpha_(t, i) * beta_(t, i) / pi;
-                //cout << "gamma[" << t << "][" << i << "]=" << gamma_(t, i) << endl;
+//                cout << "gamma[" << t << "][" << i << "]=" << gamma_(t, i) << endl;
             }
 
         }
@@ -171,12 +207,14 @@ public:
         }
     }
 
+    //参考文献：《统计学习方法》p182
     void updatePi(DMatrix<float> *gamma, DMatrix<float> *pi) {
         for (unsigned i = 0; i < pi->getDim1(); ++i) {
             (*pi)(i, 0) = (*gamma)(0, i);
         }
     }
 
+    //参考文献：《统计学习方法》p182
     void updateA(DMatrix<float> *xi, DMatrix<float> *gamma, DMatrix<float> *a) {
 
         for (unsigned i = 0; i < a->getDim1(); ++i) {
@@ -198,6 +236,7 @@ public:
 
     virtual void updateB(DMatrix<float> *gamma, DMatrix<float> *o, DMatrix<float> *b) {}
 
+
 protected:
     //模型参数
     HMMModel model_;
@@ -209,7 +248,7 @@ protected:
     DMatrix<float> gamma_;
     //t时刻处于状态i，t+1时刻处于状态j的概率
     DMatrix<float> xi_;
-    //防止浮点数下溢
+    //防止浮点数下溢，参考文献：scaling problem
     DMatrix<float> scale_;
 };
 
