@@ -4,7 +4,7 @@ import numpy as np
 
 
 #将计算出的隐藏状态写入股票数据的csv文件中
-def pain_bayeshmm_hidestate(path, hide_state_num=3, price_column='close', delta_days=5, train_days=300, epoch_num=8):
+def pain_bayeshmm_hidestate(path, hide_state_num=3, price_column='close', delta_days=1, train_days=300, epoch_num=8):
     with open(path, 'r') as f:
         titles = f.readline()[:-1].split(',')
         price_id = None
@@ -39,7 +39,7 @@ def pain_bayeshmm_hidestate(path, hide_state_num=3, price_column='close', delta_
             close_price.append(float(datas[index][price_id]))
             cur_close = np.array(close_price[-train_days:])
             before_close = np.array(close_price[-train_days-delta_days:-delta_days])
-            label = np.where(cur_close > before_close, 1, 0)
+            label = np.where(cur_close > before_close, 1.0, 0.0)
             hmm_model.train(label, epoch_num)
             cur_hide_state = hmm_model.get_hide_state()
             cur_hide_state_coff = hmm_model.get_hide_state_coff()

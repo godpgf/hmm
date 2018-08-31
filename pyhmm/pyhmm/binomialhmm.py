@@ -14,7 +14,7 @@ class BinomialHMM(object):
 
     def train(self, x, epoch_num = 8):
         self._init_cache(x)
-        hmm.trainHMM(c_void_p(self.cxx_p), self.cache, 1, len(x), c_int32(epoch_num))
+        hmm.trainHMM(c_void_p(self.cxx_p), self.cache, c_int32(1), c_int32(len(x)), c_int32(epoch_num))
 
     def _init_cache(self, x):
         cache_size = len(x)

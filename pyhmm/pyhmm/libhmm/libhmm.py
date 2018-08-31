@@ -1,6 +1,6 @@
 import ctypes
 import platform
-from ctypes import c_void_p, c_float, c_int32
+from ctypes import *
 
 sysstr = platform.system()
 
@@ -17,4 +17,5 @@ except OSError as e:
         lib_path + 'libhmm_api.so')
 
 hmm.createBinomialHMM.restype = c_void_p
+hmm.createBayesHMM.restype = c_void_p
 hmm.getHideStateCoff.restype = c_int32
