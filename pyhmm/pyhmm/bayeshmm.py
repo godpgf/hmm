@@ -2,6 +2,7 @@ from ctypes import *
 from pyhmm.libhmm import hmm
 import numpy as np
 
+
 class BayesHMM(object):
 
     def __init__(self, hide_state_cnt, event_cnt):

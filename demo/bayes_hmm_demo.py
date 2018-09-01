@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     with AlphaForest() as af:
         af.load_db('data')
-        label = AlphaArray('1399005',["v = returns > 0)"],'v',0,TEST_DAYS)[:]
+        label = AlphaArray('1399005',["v = (close > delay(close, 9))"],'v',0,TEST_DAYS)[:]
         close = AlphaArray('1399005',["v = close"], "v", 0, TEST_DAYS)[:]
         hmm_model = BayesHMM(len(colors), 2)
 

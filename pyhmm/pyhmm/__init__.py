@@ -59,8 +59,47 @@ def _paint_bayeshmm(datas, price_id, hide_state_num, delta_days, train_days, epo
     return datas
 
 
+def _paint_binomialhmm(datas, price_id, hide_state_num, delta_days, train_days, epoch_num, target_returns = 1.006):
+    index = 0
+    min_train_days = train_days + delta_days
+    close_price = []
+    while index < len(datas) and (len(close_price) < min_train_days - 1 or train_days == 0):
+        close_price.append(float(datas[index][price_id]))
+        index += 1
+
+    hmm_model = BinomialHMM(hide_state_num, delta_days)
+    while index < len(datas):
+        close_price.append(float(datas[index][price_id]))
+        cur_close = np.array(close_price[-train_days-delta_days:])
+        label = []
+        for i in range(delta_days, len(cur_close)):
+            cnt = 0
+            for j in range(delta_days):
+                if cur_close[i-j] / cur_close[i-j-1] > target_returns:
+                    cnt += 1
+            label.append(cnt)
+        label = np.array(label)
+        hmm_model.train(label, epoch_num)
+        cur_hide_state = hmm_model.get_hide_state()
+        cur_hide_state_coff = hmm_model.get_hide_state_coff()
+        real_hide_state = 0
+        coff = cur_hide_state_coff[cur_hide_state]
+        for cur_c in cur_hide_state_coff:
+            if cur_c < coff:
+                real_hide_state += 1
+        datas[index][-1] = "%d" % real_hide_state
+        index += 1
+    return datas
+
+
 #将计算出的隐藏状态写入股票数据的csv文件中
-def paint_bayeshmm_hidestate(path, hide_state_num=3, price_column='close', delta_days=1, train_days=300, epoch_num=8):
+def paint_bayeshmm_hidestate(path, hide_state_num=3, price_column='close', delta_days=10, train_days=300, epoch_num=8):
     titles, datas, price_id = _read_datas(path, price_column)
     datas = _paint_bayeshmm(datas, price_id, hide_state_num, delta_days, train_days, epoch_num)
+    _write_datas(path, titles, datas)
+
+
+def paint_binomialhmm_hidestate(path, hide_state_num=3, price_column='close', delta_days=10, train_days=300, epoch_num=8, target_returns = 1.006):
+    titles, datas, price_id = _read_datas(path, price_column)
+    datas = _paint_binomialhmm(datas, price_id, hide_state_num, delta_days, train_days, epoch_num, target_returns)
     _write_datas(path, titles, datas)
