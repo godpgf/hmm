@@ -11,7 +11,7 @@ TEST_DAYS = 750
 
 if __name__ == '__main__':
     #下载股票数据
-    # download_industry([],'1399005','data')
+    download_industry([],'1399005','data')
     print("finish download")
     #将hmm隐藏状态写入csv
     # paint_bayeshmm_hidestate("data/1399005.csv", delta_days=10)
