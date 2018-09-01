@@ -10,7 +10,7 @@ class BinomialHMM(object):
         self.hide_state_cnt = hide_state_cnt
 
     def __del__(self):
-        hmm.cleanHMM(self.cxx_p)
+        hmm.cleanHMM(c_void_p(self.cxx_p))
 
     def train(self, x, epoch_num = 8):
         self._init_cache(x)
